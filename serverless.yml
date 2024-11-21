@@ -1,0 +1,41 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: brattcode
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: aws-finalproject-typescript
+
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  profile: linus-test
+  region: eu-north-1
+  role: arn:aws:iam::586794465159:role/serverless-cloud
+
+plugins:
+  - serverless-plugin-typescript
+
+package:
+  individually: true
+
+functions:
+  createUser:
+    handler: src/functions/signUp/index.handler
+    events:
+      - httpApi:
+          path: /signup
+          method: post
+
+resources:
+  Resources:
+    userDb:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: users-dev
+        AttributeDefinitions:
+          - AttributeName: username
+            AttributeType: S
+        KeySchema:
+          - AttributeName: username
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
