@@ -22,16 +22,19 @@ export const validateData = (data: any, rules: ValidationRule[]): string[] => {
         // Validate minLength if defined
         if (rule.minLength && value.length < rule.minLength) {
             errors.push(`${rule.field} must be at least ${rule.minLength} characters long.`);
+            return;
         }
 
         // Validate maxLength if defined
         if (rule.maxLength && value.length > rule.maxLength) {
             errors.push(`${rule.field} must not exceed ${rule.maxLength} characters.`);
+            return;
         }
 
         // Validate pattern if defined (e.g., for username format)
         if (rule.pattern && !rule.pattern.test(value)) {
             errors.push(`${rule.field} is invalid.`);
+            return;
         }
     });
 
