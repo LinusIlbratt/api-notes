@@ -25,6 +25,12 @@ functions:
       - httpApi:
           path: /signup
           method: post
+  signIn:
+    handler: src/functions/signIn/index.handler
+    events:
+      - httpApi:
+          path: /signin
+          method: post
 
 resources:
   Resources:
