@@ -1,4 +1,4 @@
-interface ValidationRule {
+export interface ValidationRule {
     field: string; // Specific filed in the request body
     required: boolean; // Wheter the field is required
     minLength?: number, // Optional: Minimum length
@@ -7,7 +7,7 @@ interface ValidationRule {
 }
 
 // validation for different endpoints
-export const validateFields = (data: any, rules: ValidationRule[]): string[] => {
+export const validateData = (data: any, rules: ValidationRule[]): string[] => {
     const errors: string[] = [];
 
     rules.forEach((rule) => {
