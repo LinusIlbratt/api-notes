@@ -1,7 +1,7 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { sendResponse } from "../../response/index.js";  // Importera sendResponse för att skapa responsen
 import { handleError } from "../../response/handleError.js";  // Importera handleError för felhantering
-import { authenticateUser } from "./authenticateuser.js";
+import { authenticateUser } from "./authenticateUser.js";
 import {validateData, ValidationRule } from "../../utils/validateData.js";
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
