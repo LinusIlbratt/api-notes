@@ -37,6 +37,12 @@ functions:
       - httpApi:
           path: /createNote
           method: post
+  getNote:
+    handler: src/functions/getNote/index.main
+    events:
+      - httpApi:
+          path: /getNotes
+          method: get
 
 resources:
   Resources:
