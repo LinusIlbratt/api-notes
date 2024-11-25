@@ -1,6 +1,5 @@
-
 import { handleError } from "../../response/handleError.js";
-import { validateData } from "../../utils/validateData.js";
+import { validateData, ValidationRule } from "../../utils/validateData.js";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
@@ -9,47 +8,57 @@ import middy from "@middy/core";
 import { authMiddleware } from "../../utils/authMiddleware.js";
 import { sendResponse } from "../../response/index.js";
 
-// Expanderad typ för event med användarinformation
+// Expanded type for event with user information
 interface AuthenticatedEvent extends APIGatewayProxyEvent {
-    user: { id: string }; // Lägg till userId från JWT-token
+    user: { id: string }; // Add userId from JWT-token
 }
 
 export const handler = async (
     event: AuthenticatedEvent
 ): Promise<APIGatewayProxyResult> => {
-    console.log("Received event:", JSON.stringify(event, null, 2)); // Logga hela eventet
+    console.log("Received event:", JSON.stringify(event, null, 2)); // Debugging: log the incoming event
 
-    // Kontrollera att request body finns
+    // Check if request body exists
     if (!event.body) {
-        return sendResponse(400, { error: "Request body is required" });
+        return handleError(400, "Request body is required");
     }
 
     let note;
     try {
+        // Parse the request body
         note = JSON.parse(event.body);
+        console.log("Parsed note:", note); // Debugging: log the parsed note
     } catch (error) {
-        console.log("Error parsing JSON:", error); // Logga JSON-parsningsfel
-        return sendResponse(400, { error: "Invalid JSON in request body" });
+        console.error("Error parsing JSON:", error); // Log parsing errors
+        return handleError(400, "Invalid JSON in request body");
     }
 
-    console.log("Parsed note:", note); // Logga den parsade anteckningen
-
-    // Kontrollera att nödvändiga fält finns
+    // Validate required fields
     if (!note.title || !note.text) {
-        return sendResponse(400, { error: "Title and text are required" });
+        return handleError(400, "Title and text are required");
     }
 
-    console.log("Note passed validation");
+    const validationRules: ValidationRule[] = [
+        { field: "title", required: true, maxLength: 100 },
+        { field: "text", required: true, maxLength: 1000 },
+    ];
 
-    // Hämta userId från middleware
+    // Validate field lengths
+    const validationErrors = validateData(note, validationRules);
+    
+    if (validationErrors.length > 0) {
+        return handleError(400, validationErrors.join(", "));
+    }
+
+    // Get userId from middleware
     const userId = event.user?.id;
-    console.log("User ID:", userId); // Logga userId
-
     if (!userId) {
-        return sendResponse(401, { error: "Unauthorized: Missing user ID" });
+        return handleError(401, "Unauthorized: Missing user ID");
     }
 
-    // Initiera DynamoDB-klient
+    console.log("User ID:", userId); // Debugging: log the userId
+
+    // Initialize DynamoDB client
     const dynamoDBClient = new DynamoDBClient({ region: "eu-north-1" });
     const db = DynamoDBDocumentClient.from(dynamoDBClient);
     const noteId = nanoid();
@@ -66,20 +75,18 @@ export const handler = async (
         },
     };
 
-    console.log("DynamoDB params:", params); // Logga DynamoDB-parametrar
+    console.log("DynamoDB params:", params); // Debugging: log DynamoDB parameters
 
     try {
+        // Save the note to DynamoDB
         await db.send(new PutCommand(params));
-        console.log("Note successfully saved with ID:", noteId); // Logga framgång
+        console.log("Note successfully saved with ID:", noteId); // Debugging: log success message
         return sendResponse(201, { success: true, id: noteId });
     } catch (error) {
-        console.error("Error inserting note:", error); // Logga felet
-        return sendResponse(500, { error: "Could not save the note" });
+        console.error("Error inserting note:", error); // Log unexpected errors
+        return handleError(500, "Could not save the note");
     }
 };
 
-
-// Typdefiniera Middy för att stödja AuthenticatedEvent
+// Middy wraps the handler to include authentication middleware
 export const main = middy<AuthenticatedEvent, APIGatewayProxyResult>(handler).use(authMiddleware());
-
-
