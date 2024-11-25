@@ -1,12 +1,11 @@
 import { handleError } from "../../response/handleError.js";
 import { validateData, ValidationRule } from "../../utils/validateData.js";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
-import { nanoid } from "nanoid";
 import middy from "@middy/core";
 import { authMiddleware } from "../../utils/authMiddleware.js";
 import { sendResponse } from "../../response/index.js";
+import { saveNote } from "./saveNote.js";
+import { postNoteValidationRules } from "../../utils/validationRules.js";
 
 // Expanded type for event with user information
 interface AuthenticatedEvent extends APIGatewayProxyEvent {
@@ -38,13 +37,8 @@ export const handler = async (
         return handleError(400, "Title and text are required");
     }
 
-    const validationRules: ValidationRule[] = [
-        { field: "title", required: true, maxLength: 100 },
-        { field: "text", required: true, maxLength: 1000 },
-    ];
-
     // Validate field lengths
-    const validationErrors = validateData(note, validationRules);
+    const validationErrors = validateData(note, postNoteValidationRules);
     
     if (validationErrors.length > 0) {
         return handleError(400, validationErrors.join(", "));
@@ -58,32 +52,12 @@ export const handler = async (
 
     console.log("User ID:", userId); // Debugging: log the userId
 
-    // Initialize DynamoDB client
-    const dynamoDBClient = new DynamoDBClient({ region: "eu-north-1" });
-    const db = DynamoDBDocumentClient.from(dynamoDBClient);
-    const noteId = nanoid();
-
-    const params = {
-        TableName: "notes-db",
-        Item: {
-            userId,
-            noteId,
-            title: note.title,
-            text: note.text,
-            createdAt: new Date().toISOString(),
-            modifiedAt: new Date().toISOString(),
-        },
-    };
-
-    console.log("DynamoDB params:", params); // Debugging: log DynamoDB parameters
-
     try {
-        // Save the note to DynamoDB
-        await db.send(new PutCommand(params));
-        console.log("Note successfully saved with ID:", noteId); // Debugging: log success message
+        // Save a note with saveNote function
+        const noteId = await saveNote(userId, note);
         return sendResponse(201, { success: true, id: noteId });
     } catch (error) {
-        console.error("Error inserting note:", error); // Log unexpected errors
+        console.error("Error saving note:", error); // Logga eventuella fel
         return handleError(500, "Could not save the note");
     }
 };
