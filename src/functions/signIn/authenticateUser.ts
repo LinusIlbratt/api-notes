@@ -38,7 +38,7 @@ export async function authenticateUser(username: string, password: string): Prom
     }
 
     const token = jwt.sign(
-        { id: user.userId, username: user.username },
+        { id: user.userId?.S, username: user.username?.S },
         secretKey,
         { expiresIn: 3600 }
     );
