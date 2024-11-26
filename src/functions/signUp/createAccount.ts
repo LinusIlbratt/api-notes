@@ -5,31 +5,25 @@ import { PutCommand } from "@aws-sdk/lib-dynamodb";
 const dynamoDbClient = new DynamoDBClient();
 const db = DynamoDBDocumentClient.from(dynamoDbClient)
 
-export async function createAccount(
-    username: string,
-    password: string,
-    userId: string
-): Promise<{ success: boolean, userId?: string, message?: string }> {
+export async function createAccount(username: string, password: string, userId: string) {
+    if (!username || !password || !userId) {
+        throw new Error("Missing required fields");
+    }
+
+    const params = {
+        TableName: "users-dev",
+        Item: {
+            username,
+            password,
+            userId,
+        },
+    };
 
     try {
-
-        if (!username || !password || !userId) {
-            return { success: false, message: "missing required fields" }
-        }
-        const params = {
-            TableName: 'users-dev',
-            Item: {
-                username,
-                password,
-                userId
-            },
-        };
-
         await db.send(new PutCommand(params));
-        return { success: true, userId };
+        return userId;
     } catch (error) {
         console.error("Error creating user", error);
-
-        return { success: false, message: "Could not create account" };
+        throw new Error("Could not create account");
     }
 }

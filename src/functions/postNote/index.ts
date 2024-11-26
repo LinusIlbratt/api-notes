@@ -1,11 +1,11 @@
 import { handleError } from "../../response/handleError.js";
-import { validateData, ValidationRule } from "../../utils/validateData.js";
+import { validateData } from "../../utils/validateData.js";
+import { postNoteValidationRules } from "../../utils/validationRules.js";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import middy from "@middy/core";
 import { authMiddleware } from "../../utils/authMiddleware.js";
 import { sendResponse } from "../../response/index.js";
 import { saveNote } from "./saveNote.js";
-import { postNoteValidationRules } from "../../utils/validationRules.js";
 
 // Expanded type for event with user information
 interface AuthenticatedEvent extends APIGatewayProxyEvent {
@@ -57,7 +57,7 @@ export const handler = async (
         const noteId = await saveNote(userId, note);
         return sendResponse(201, { success: true, id: noteId });
     } catch (error) {
-        console.error("Error saving note:", error); // Logga eventuella fel
+        console.error("Error saving note:", error);
         return handleError(500, "Could not save the note");
     }
 };
