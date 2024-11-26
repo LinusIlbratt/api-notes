@@ -48,7 +48,7 @@ functions:
     events:
       - httpApi:
           path: /updateNote
-          method: post
+          method: put
 
 resources:
   Resources:
