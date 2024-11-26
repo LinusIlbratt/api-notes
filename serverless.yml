@@ -43,6 +43,12 @@ functions:
       - httpApi:
           path: /getNotes
           method: get
+  updateNote:
+    handler: src/functions/updateNote/index.main
+    events:
+      - httpApi:
+          path: /updateNote
+          method: put
 
 resources:
   Resources:

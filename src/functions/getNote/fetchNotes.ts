@@ -13,11 +13,6 @@ export const fetchNotes = async (userId: string): Promise<any[]> => {
         },
     };
 
-    try {
-        const result = await db.send(new QueryCommand(params));
-        return result.Items || [];
-    } catch (error) {
-        console.error("Error fetching notes:", error);
-        throw new Error("Could not fetch notes");
-    }
+    const result = await db.send(new QueryCommand(params));
+    return result.Items || [];
 };

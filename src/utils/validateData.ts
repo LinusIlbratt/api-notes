@@ -11,27 +11,32 @@ export const validateData = (data: any, rules: ValidationRule[]): string[] => {
     const errors: string[] = [];
 
     rules.forEach((rule) => {
-        const value = data[rule.field]
+        const value = data[rule.field];
 
-        // Check if field is required
+        // If field is required and missing
         if (rule.required && !value) {
-            errors.push(`${rule.field} is required`)
+            errors.push(`${rule.field} is required`);
             return;
         }
 
-        // Validate minLength if defined
+        // If field is optional and doesnt exist, skip validation
+        if (!rule.required && (value === undefined || value === null)) {
+            return;
+        }
+
+        // Validate minLength if field exists
         if (rule.minLength && value.length < rule.minLength) {
             errors.push(`${rule.field} must be at least ${rule.minLength} characters long.`);
             return;
         }
 
-        // Validate maxLength if defined
+        //  Validate maxLength if field exists
         if (rule.maxLength && value.length > rule.maxLength) {
             errors.push(`${rule.field} must not exceed ${rule.maxLength} characters.`);
             return;
         }
 
-        // Validate pattern if defined (e.g., for username format)
+        // Validate pattern if field exists 
         if (rule.pattern && !rule.pattern.test(value)) {
             errors.push(`${rule.field} is invalid.`);
             return;
@@ -39,4 +44,4 @@ export const validateData = (data: any, rules: ValidationRule[]): string[] => {
     });
 
     return errors;
-}
+};
