@@ -1,94 +1,60 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { DynamoDBDocumentClient, UpdateCommand } from "@aws-sdk/lib-dynamodb";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { authMiddleware } from "../../utils/authMiddleware.js";
+import { editNote } from "./editNote.js";
+import { sendResponse } from "../../response/index.js";
+import { handleError } from "../../response/handleError.js";
 import middy from "@middy/core";
+import { validateData } from "../../utils/validateData.js";
+import { updateNoteValidationRules } from "../../utils/validationRules.js";
 
-// Typ för AuthenticatedEvent
+// Type for AuthenticatedEvent Typ för AuthenticatedEvent
 interface AuthenticatedEvent extends APIGatewayProxyEvent {
     user: { id: string }; // Add userId from JWT-token
 }
-
-const dynamoDBClient = new DynamoDBClient({ region: "eu-north-1" });
-const db = DynamoDBDocumentClient.from(dynamoDBClient);
 
 export const handler = async (
     event: AuthenticatedEvent
 ): Promise<APIGatewayProxyResult> => {
     if (!event.body) {
-        return {
-            statusCode: 400,
-            body: JSON.stringify({ error: "Request body is required" }),
-        };
+        return handleError(400, "Request body is required");
     }
 
     const requestBody = JSON.parse(event.body);
-
     const { noteId, title, text } = requestBody;
 
-    // Validera att noteId finns
+    // Check to see that noteId exists
     if (!noteId) {
-        return {
-            statusCode: 400,
-            body: JSON.stringify({ error: "noteId is required" }),
-        };
+        return handleError(400, "noteId is required");
     }
 
-    // Hämta userId från authMiddleware
+    // Validate atleast that title or text exists
+    if (!title && !text) {
+        return handleError(400, "At least one of title or text must be provided for update");
+    }
+
+    // Validate field length for title and text
+    const validationErrors = validateData(requestBody, updateNoteValidationRules);
+    if (validationErrors.length > 0) {
+        return handleError(400, validationErrors.join(", "));
+    }
+
+    // Get userId from authMiddleware
     const userId = event.user?.id;
     if (!userId) {
-        return {
-            statusCode: 401,
-            body: JSON.stringify({ error: "Unauthorized: Missing user ID" }),
-        };
+        return handleError(401, "Unauthorized: Missing user ID");
     }
-
-    // Dynamiskt bygg uppdateringsuttryck
-    const params: any = {
-        TableName: "notes-db",
-        Key: {
-            userId,
-            noteId,
-        },
-        UpdateExpression: "SET",
-        ExpressionAttributeNames: {},
-        ExpressionAttributeValues: {},
-        ReturnValues: "ALL_NEW",
-    };
-
-    let isFirst = true;
-    if (title) {
-        params.UpdateExpression += isFirst ? " #title = :title" : ", #title = :title";
-        params.ExpressionAttributeNames["#title"] = "title";
-        params.ExpressionAttributeValues[":title"] = title;
-        isFirst = false;
-    }
-
-    if (text) {
-        params.UpdateExpression += isFirst ? " #text = :text" : ", #text = :text";
-        params.ExpressionAttributeNames["#text"] = "text";
-        params.ExpressionAttributeValues[":text"] = text;
-        isFirst = false;
-    }
-
-    // Lägg alltid till `modifiedAt`
-    params.UpdateExpression += isFirst ? " modifiedAt = :modifiedAt" : ", modifiedAt = :modifiedAt";
-    params.ExpressionAttributeValues[":modifiedAt"] = new Date().toISOString();
 
     try {
-        const result = await db.send(new UpdateCommand(params));
-        return {
-            statusCode: 200,
-            body: JSON.stringify({ success: true, updatedNote: result.Attributes }),
-        };
-    } catch (error) {
+        // Update the note with editNote
+        const updatedNote = await editNote({ userId, noteId, title, text });
+        return sendResponse(200, { success: true, updatedNote });
+    } catch (error: any) {
+        if (error.name === "ConditionalCheckFailedException") {
+            return handleError(404, "Note not found");
+        }
         console.error("Error updating note:", error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: "Could not update the note" }),
-        };
+        return handleError(500, "Could not update the note");
     }
 };
 
-// Uppdaterad export med generisk typ för middy
 export const main = middy<AuthenticatedEvent, APIGatewayProxyResult>(handler).use(authMiddleware());
