@@ -45,3 +45,10 @@ export const validateData = (data: any, rules: ValidationRule[]): string[] => {
 
     return errors;
 };
+
+// Validate noteId
+export const validateNoteId = (noteId?: string): void => {
+    if (!noteId) {
+        throw new Error("noteId is required");
+    }
+};

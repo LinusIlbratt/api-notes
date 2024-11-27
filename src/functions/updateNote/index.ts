@@ -1,60 +1,66 @@
+import middy from "@middy/core";
+import jsonBodyParser from "@middy/http-json-body-parser";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { authMiddleware } from "../../utils/authMiddleware.js";
-import { editNote } from "./editNote.js";
-import { sendResponse } from "../../response/index.js";
-import { handleError } from "../../response/handleError.js";
-import middy from "@middy/core";
 import { validateData } from "../../utils/validateData.js";
 import { updateNoteValidationRules } from "../../utils/validationRules.js";
+import { editNote } from "./editNote.js";
+import { CustomError, HttpStatusCode } from "../../utils/errorHandler.js";
+import { errorHandler } from "../../utils/errorHandler.js";
 
-// Type for AuthenticatedEvent Typ för AuthenticatedEvent
+
 interface AuthenticatedEvent extends APIGatewayProxyEvent {
-    user: { id: string }; // Add userId from JWT-token
+    user: { id: string }; // UserId från JWT-token
 }
 
 export const handler = async (
-    event: AuthenticatedEvent
+    event: AuthenticatedEvent & { body: { noteId: string; title?: string; text?: string } }
 ): Promise<APIGatewayProxyResult> => {
-    if (!event.body) {
-        return handleError(400, "Request body is required");
-    }
+    const { noteId, title, text } = event.body;
 
-    const requestBody = JSON.parse(event.body);
-    const { noteId, title, text } = requestBody;
-
-    // Check to see that noteId exists
+    // Validate noteId
     if (!noteId) {
-        return handleError(400, "noteId is required");
+        throw new CustomError("noteId is required", HttpStatusCode.BadRequest);
     }
 
-    // Validate atleast that title or text exists
+    // Validate at least one field to update
     if (!title && !text) {
-        return handleError(400, "At least one of title or text must be provided for update");
+        throw new CustomError(
+            "At least one of title or text must be provided for update",
+            HttpStatusCode.BadRequest
+        );
     }
 
-    // Validate field length for title and text
-    const validationErrors = validateData(requestBody, updateNoteValidationRules);
+    // Validate field lengths
+    const validationErrors = validateData(event.body, updateNoteValidationRules);
     if (validationErrors.length > 0) {
-        return handleError(400, validationErrors.join(", "));
+        throw new CustomError(validationErrors.join(", "), HttpStatusCode.BadRequest);
     }
 
-    // Get userId from authMiddleware
+    // Get userId from middleware
     const userId = event.user?.id;
     if (!userId) {
-        return handleError(401, "Unauthorized: Missing user ID");
+        throw new CustomError("Unauthorized: Missing user ID", HttpStatusCode.Unauthorized);
     }
 
     try {
-        // Update the note with editNote
+        // Update the note
         const updatedNote = await editNote({ userId, noteId, title, text });
-        return sendResponse(200, { success: true, updatedNote });
+
+        return {
+            statusCode: HttpStatusCode.OK,
+            body: JSON.stringify({ success: true, updatedNote }),
+        };
     } catch (error: any) {
         if (error.name === "ConditionalCheckFailedException") {
-            return handleError(404, "Note not found");
+            throw new CustomError("Note not found", HttpStatusCode.NotFound);
         }
         console.error("Error updating note:", error);
-        return handleError(500, "Could not update the note");
+        throw new CustomError("Could not update the note", HttpStatusCode.InternalServerError);
     }
 };
 
-export const main = middy<AuthenticatedEvent, APIGatewayProxyResult>(handler).use(authMiddleware());
+export const main = middy(handler)
+    .use(jsonBodyParser()) 
+    .use(authMiddleware()) 
+    .use(errorHandler); 

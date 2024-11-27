@@ -19,9 +19,7 @@ export async function saveNote(userId: string, note: { title: string; text: stri
             modifiedAt: new Date().toISOString(),
             isDeleted: 0,
         },
-    };
-
-   // console.log("DynamoDB params:", params); 
+    };   
 
     try {
         await db.send(new PutCommand(params));
