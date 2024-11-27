@@ -55,6 +55,12 @@ functions:
       - httpApi:
           path: /delete
           method: delete
+  restoreNote:
+    handler: src/functions/restoreNote/index.main
+    events:
+      - httpApi:
+          path: /restore
+          method: post
 
 resources:
   Resources:
