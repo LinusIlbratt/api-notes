@@ -1,33 +1,47 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { sendResponse } from "../../response/index.js";  // Importera sendResponse för att skapa responsen
-import { handleError } from "../../response/handleError.js";  // Importera handleError för felhantering
+import { CustomError, HttpStatusCode } from "../../utils/errorHandler.js";
 import { authenticateUser } from "./authenticateUser.js";
-import {validateData, ValidationRule } from "../../utils/validateData.js";
+import { validateData, ValidationRule } from "../../utils/validateData.js";
+import middy from "@middy/core";
+import jsonBodyParser from "@middy/http-json-body-parser";
+import { errorHandler } from "../../utils/errorHandler.js";
+import { signInRules } from "../../utils/validationRules.js";
 
-export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    const { username, password }: { username: string; password: string } = JSON.parse(event.body || "{}");
+// Handler
+export const handler = async (event: APIGatewayProxyEvent & { body: { username: string; password: string } }): Promise<APIGatewayProxyResult> => {
+    const { username, password } = event.body;
 
-    // Define validation rules for signIn
-    const signInRules: ValidationRule[] = [
-        { field: "username", required: true },
-        { field: "password", required: true },
-    ];
-
-    // Validate fields based on the rules
+    // Validate input
     const validationErrors = validateData({ username, password }, signInRules);
-
     if (validationErrors.length > 0) {
-        return handleError(400, validationErrors.join(", "));
+        throw new CustomError(`Validation failed: ${validationErrors.join(", ")}`, HttpStatusCode.BadRequest);  
     }
 
-    // Call authenticatenUser to get the user and validate password
-    const result = await authenticateUser(username, password);
+    try {
+        // Authenticate user
+        const result = await authenticateUser(username, password);
 
-    // If auth is a success, return a JWT-token
-    if (result.success) {
-        return sendResponse(result.statusCode || 200, { success: true, token: result.token });
-    } else {
-        // If auth fails, return message from result
-        return handleError(result.statusCode || 400, result.message || "Authentication failed");
+        if (result.success) {
+            return {
+                statusCode: HttpStatusCode.OK, // 200 OK
+                body: JSON.stringify({
+                    success: true,
+                    token: result.token,
+                }),
+            };
+        } else {
+            throw new CustomError(result.message || "Authentication failed", result.statusCode || HttpStatusCode.Unauthorized);
+        }
+    } catch (error) {
+        console.error("Error during authentication:", error);
+
+        if (error instanceof CustomError) {
+            throw error; 
+        }
+        throw new CustomError("An unexpected error occurred during authentication", HttpStatusCode.InternalServerError);
     }
 };
+
+export const main = middy(handler)
+    .use(jsonBodyParser())  
+    .use(errorHandler);  

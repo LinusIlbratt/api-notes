@@ -20,13 +20,13 @@ package:
 
 functions:
   createUser:
-    handler: src/functions/signUp/index.handler
+    handler: src/functions/signUp/index.main
     events:
       - httpApi:
           path: /signup
           method: post
   signIn:
-    handler: src/functions/signIn/index.handler
+    handler: src/functions/signIn/index.main
     events:
       - httpApi:
           path: /signin

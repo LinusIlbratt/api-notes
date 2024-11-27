@@ -1,43 +1,51 @@
+import middy from "@middy/core";
+import jsonBodyParser from "@middy/http-json-body-parser";
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { sendResponse } from "../../response/index.js"
-import bcrypt from 'bcryptjs';
+import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { createAccount } from "./createAccount.js";
 import { checkUserName } from "./checkUserName.js";
-import { handleError } from "../../response/handleError.js";
-import { validateData} from "../../utils/validateData.js";
+import { CustomError, HttpStatusCode } from "../../utils/errorHandler.js";
+import { validateData } from "../../utils/validateData.js";
 import { signUpRules } from "../../utils/validationRules.js";
+import { errorHandler } from "../../utils/errorHandler.js";
 
 export const handler = async (
-    event: APIGatewayProxyEvent
+    event: APIGatewayProxyEvent & { body: { username: string; password: string } } // Typa body som objekt
 ): Promise<APIGatewayProxyResult> => {
-    try {
-        const { username, password } = JSON.parse(event.body || "{}");        
-        
-        const validationErrors = validateData({ username, password }, signUpRules);
-        if (validationErrors.length > 0) {
-            return handleError(400, validationErrors.join(", "));
-        }
+    const { username, password } = event.body; // Automatisk parsing med jsonBodyParser
 
-        if (await checkUserName(username)) {
-            return handleError(400, "Username already exists");
-        }
+    // 1. Validera input
+    const validationErrors = validateData({ username, password }, signUpRules);
+    if (validationErrors.length > 0) {
+        throw new CustomError(validationErrors.join(", "), HttpStatusCode.BadRequest);
+    }
+
+    try {
+        
+        await checkUserName(username);
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const userId = nanoid();
         await createAccount(username, hashedPassword, userId);
-        
-        return sendResponse(200, { success: true, userId, message: "User created successfully" });
-    } catch (error: any) {
-        console.error("Error in sign-up handler:", error);
 
-        // Return error based on error type
-        if (error.message === "Username already exists") {
-            return handleError(400, error.message);
+        return {
+            statusCode: HttpStatusCode.Created,
+            body: JSON.stringify({
+                success: true,
+                userId,
+                message: "User created successfully",
+            }),
+        };
+    } catch (error) {       
+        if (error instanceof CustomError) {
+            throw error;
         }
-        if (error.message === "Missing required fields") {
-            return handleError(400, error.message);
-        }
-        return handleError(500);
+        console.error("Unexpected error in sign-up handler:", error);
+        throw new CustomError("An unexpected error occurred", HttpStatusCode.InternalServerError);
     }
 };
+
+export const main = middy(handler)
+    .use(jsonBodyParser()) 
+    .use(errorHandler); 

@@ -1,14 +1,12 @@
 import { editNote } from "../updateNote/editNote.js";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand } from "@aws-sdk/lib-dynamodb";
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import middy from "@middy/core";
+import jsonBodyParser from "@middy/http-json-body-parser";
 import { authMiddleware } from "../../utils/authMiddleware.js";
-import { handleError } from "../../response/handleError.js";
+import { errorHandler } from "../../utils/errorHandler.js";
 import { sendResponse } from "../../response/index.js";
-
-const dynamoDBClient = new DynamoDBClient({ region: "eu-north-1" });
-const db = DynamoDBDocumentClient.from(dynamoDBClient);
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import { getDeletedNote } from "./getDeletedNote.js";
+import { CustomError, HttpStatusCode } from "../../utils/errorHandler.js";
 
 interface AuthenticatedEvent extends APIGatewayProxyEvent {
     user: { id: string };
@@ -17,59 +15,35 @@ interface AuthenticatedEvent extends APIGatewayProxyEvent {
 export const handler = async (
     event: AuthenticatedEvent
 ): Promise<APIGatewayProxyResult> => {
-    if (!event.body) {
-        return handleError(400, "Request body is required");
-    }
+    const { noteId } = event.body as { noteId?: string };
 
-    const { noteId } = JSON.parse(event.body);
-
+    // Validate noteId
     if (!noteId) {
-        return handleError(400, "noteId is required");
+        throw new CustomError("noteId is required", HttpStatusCode.BadRequest);
     }
 
-    const userId = event.user?.id;
-    if (!userId) {
-        return handleError(401, "Unauthorized: Missing user ID");
-    }
+    const userId = event.user?.id!;
 
-    try {
-       
-        const params = {
-            TableName: "notes-db",
-            Key: {
-                userId,
-                noteId,
-            },
-            ProjectionExpression: "isDeleted",
-        };
+    // Fetch deleted note
+    await getDeletedNote(userId, noteId);
 
-        const result = await db.send(new GetCommand(params));
+    // Restore note
+    const updatedNote = await editNote({
+        userId,
+        noteId,
+        isDeleted: false,
+    });
 
-        if (!result.Item) {
-            return handleError(404, "Note not found");
-        }
-
-        const isDeleted = result.Item.isDeleted;
-
-        if (!isDeleted) {
-            return handleError(400, "This note is already active");
-        }
-        
-        const updatedNote = await editNote({
-            userId,
-            noteId,
-            isDeleted: false, // Restore note
-        });
-
-        return sendResponse(200, {
-            success: true,
-            message: `Note with ID "${noteId}" has been restored`,
-            updatedNote,
-        });
-    } catch (error) {
-        console.error("Error restoring note:", error);
-        return handleError(500, "Could not restore the note");
-    }
+    return sendResponse(200, {
+        success: true,
+        message: `Note with ID "${noteId}" has been restored`,
+        updatedNote,
+    });
 };
 
-export const main = middy<AuthenticatedEvent, APIGatewayProxyResult>(handler).use(authMiddleware());
+// Wrap handler with Middy
+export const main = middy(handler)
+    .use(jsonBodyParser()) // Automatically parses JSON body
+    .use(authMiddleware()) // Authentication middleware
+    .use(errorHandler); // Error handling middleware
+

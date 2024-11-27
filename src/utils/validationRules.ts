@@ -15,4 +15,9 @@ export const signUpRules: ValidationRule[] = [
     { field: "password", required: true, minLength: 6 },
 ];
 
+export const signInRules: ValidationRule[] = [
+    { field: "username", required: true },
+    { field: "password", required: true },
+];
+
 

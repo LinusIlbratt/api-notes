@@ -1,66 +1,50 @@
-import { handleError } from "../../response/handleError.js";
+import middy from "@middy/core";
+import jsonBodyParser from "@middy/http-json-body-parser";
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
+import { authMiddleware } from "../../utils/authMiddleware.js";
+import { errorHandler } from "../../utils/errorHandler.js";
 import { validateData } from "../../utils/validateData.js";
 import { postNoteValidationRules } from "../../utils/validationRules.js";
-import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import middy from "@middy/core";
-import { authMiddleware } from "../../utils/authMiddleware.js";
-import { sendResponse } from "../../response/index.js";
 import { saveNote } from "./saveNote.js";
+import { CustomError, HttpStatusCode } from "../../utils/errorHandler.js";
 
 // Expanded type for event with user information
 interface AuthenticatedEvent extends APIGatewayProxyEvent {
-    user: { id: string }; // Add userId from JWT-token
+    user: { id: string };
 }
 
 export const handler = async (
-    event: AuthenticatedEvent
+    event: AuthenticatedEvent & { body: { title: string; text: string } }
 ): Promise<APIGatewayProxyResult> => {
-    console.log("Received event:", JSON.stringify(event, null, 2)); 
+    console.log("Received event:", JSON.stringify(event, null, 2));
 
-    // Check if request body exists
-    if (!event.body) {
-        return handleError(400, "Request body is required");
-    }
-
-    let note;
-    try {
-        // Parse the request body
-        note = JSON.parse(event.body);
-        console.log("Parsed note:", note); 
-    } catch (error) {
-        console.error("Error parsing JSON:", error); 
-        return handleError(400, "Invalid JSON in request body");
-    }
-
-    // Validate required fields
-    if (!note.title || !note.text) {
-        return handleError(400, "Title and text are required");
-    }
-
-    // Validate field lengths
-    const validationErrors = validateData(note, postNoteValidationRules);
-    
+    // Validate input
+    const validationErrors = validateData(event.body, postNoteValidationRules);
     if (validationErrors.length > 0) {
-        return handleError(400, validationErrors.join(", "));
+        throw new CustomError(validationErrors.join(", "), HttpStatusCode.BadRequest);
     }
 
-    // Get userId from middleware
-    const userId = event.user?.id;
-    if (!userId) {
-        return handleError(401, "Unauthorized: Missing user ID");
-    }
-
-    console.log("User ID:", userId); 
+    // Extract user ID from middleware
+    const userId = event.user.id;
+    console.log("User ID:", userId);
 
     try {
-        // Save a note with saveNote function
-        const noteId = await saveNote(userId, note);
-        return sendResponse(201, { success: true, id: noteId });
+        // Save note
+        const { title, text } = event.body;
+        const noteId = await saveNote(userId, { title, text });
+
+        return {
+            statusCode: HttpStatusCode.Created, // 201 Created
+            body: JSON.stringify({ success: true, id: noteId }),
+        };
     } catch (error) {
         console.error("Error saving note:", error);
-        return handleError(500, "Could not save the note");
+        throw new CustomError("Could not save the note", HttpStatusCode.InternalServerError);
     }
 };
 
-// Middy wraps the handler to include authentication middleware
-export const main = middy<AuthenticatedEvent, APIGatewayProxyResult>(handler).use(authMiddleware());
+// Middy wraps the handler to include middleware
+export const main = middy(handler)
+    .use(jsonBodyParser()) // Automatically parses JSON body
+    .use(authMiddleware()) // Adds user authentication
+    .use(errorHandler); // Handles errors
