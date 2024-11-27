@@ -14,7 +14,7 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "@types/aws-lambda": "^8.10.145",
+    "@types/aws-lambda": "^8.10.146",
     "@types/bcrypt": "^5.0.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.7",
@@ -27,7 +27,11 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.696.0",
     "@aws-sdk/lib-dynamodb": "^3.696.0",
+    "@middy/core": "^5.5.1",
+    "@middy/http-error-handler": "^6.0.0",
+    "@middy/http-json-body-parser": "^6.0.0",
     "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
     "jsonwebtoken": "^9.0.2",
     "middy": "^0.24.0",
     "nanoid": "^5.0.8",
