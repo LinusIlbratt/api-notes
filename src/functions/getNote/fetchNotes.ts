@@ -8,8 +8,10 @@ export const fetchNotes = async (userId: string): Promise<any[]> => {
     const params = {
         TableName: "notes-db",
         KeyConditionExpression: "userId = :userId",
+        FilterExpression: "isDeleted = :isDeleted",
         ExpressionAttributeValues: {
             ":userId": userId,
+            ":isDeleted": 0,
         },
     };
 
