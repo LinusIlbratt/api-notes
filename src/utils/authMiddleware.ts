@@ -2,12 +2,11 @@ import { MiddlewareObj } from "@middy/core";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { APIGatewayProxyEvent } from "aws-lambda";
 
-// Expanderad typ för event med användarinformation
 interface AuthenticatedEvent extends APIGatewayProxyEvent {
-    user?: { id: string }; // Lagra användarinformation från token
+    user?: { id: string }; // Store userinfo from token
 }
 
-// Middleware för autentisering
+// Middleware for auth
 export const authMiddleware = (): MiddlewareObj<AuthenticatedEvent> => {
     console.log("authMiddleware triggered");
     return {
@@ -24,11 +23,11 @@ export const authMiddleware = (): MiddlewareObj<AuthenticatedEvent> => {
 
             try {
                 const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string);
-                console.log("Decoded token:", decoded); // Logga payload från tokenen
+              //  console.log("Decoded token:", decoded); 
 
-                // Kontrollera om decoded är ett objekt (JwtPayload)
+                // Check if decoded is a object, JwTPayload
                 if (typeof decoded === "object" && decoded !== null && "id" in decoded) {
-                    handler.event.user = { id: decoded.id as string }; // Lagra `userId` i eventet
+                    handler.event.user = { id: decoded.id as string }; // Store `userId` in event
                     console.log("User ID added to event:", handler.event.user);
                 } else {
                     throw new Error("Unauthorized: Missing user ID in token");

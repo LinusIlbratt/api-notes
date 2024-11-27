@@ -17,17 +17,18 @@ export async function saveNote(userId: string, note: { title: string; text: stri
             text: note.text,
             createdAt: new Date().toISOString(),
             modifiedAt: new Date().toISOString(),
+            isDeleted: 0,
         },
     };
 
-    console.log("DynamoDB params:", params); // Logga DynamoDB-parametrar för debugging
+   // console.log("DynamoDB params:", params); 
 
     try {
         await db.send(new PutCommand(params));
-        console.log("Note successfully saved with ID:", noteId); // Logga framgångsmeddelande
+        console.log("Note successfully saved with ID:", noteId);
         return noteId;
     } catch (error) {
-        console.error("Error inserting note:", error); // Logga eventuella fel
+        console.error("Error inserting note:", error); 
         throw new Error("Could not save the note");
     }
 }

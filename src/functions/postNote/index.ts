@@ -15,7 +15,7 @@ interface AuthenticatedEvent extends APIGatewayProxyEvent {
 export const handler = async (
     event: AuthenticatedEvent
 ): Promise<APIGatewayProxyResult> => {
-    console.log("Received event:", JSON.stringify(event, null, 2)); // Debugging: log the incoming event
+    console.log("Received event:", JSON.stringify(event, null, 2)); 
 
     // Check if request body exists
     if (!event.body) {
@@ -26,9 +26,9 @@ export const handler = async (
     try {
         // Parse the request body
         note = JSON.parse(event.body);
-        console.log("Parsed note:", note); // Debugging: log the parsed note
+        console.log("Parsed note:", note); 
     } catch (error) {
-        console.error("Error parsing JSON:", error); // Log parsing errors
+        console.error("Error parsing JSON:", error); 
         return handleError(400, "Invalid JSON in request body");
     }
 
@@ -50,7 +50,7 @@ export const handler = async (
         return handleError(401, "Unauthorized: Missing user ID");
     }
 
-    console.log("User ID:", userId); // Debugging: log the userId
+    console.log("User ID:", userId); 
 
     try {
         // Save a note with saveNote function

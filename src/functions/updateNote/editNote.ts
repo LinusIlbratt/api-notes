@@ -10,6 +10,7 @@ interface ModifyNoteParams {
     noteId: string;
     title?: string;
     text?: string;
+    isDeleted?: boolean;
 }
 
 function addUpdateExpression(
@@ -25,8 +26,8 @@ function addUpdateExpression(
 }
 
 
-export async function editNote({ userId, noteId, title, text }: ModifyNoteParams) {
-    // Check if necessary params exists
+export async function editNote({ userId, noteId, title, text, isDeleted }: ModifyNoteParams) {
+    // Check if necessary params exist
     if (!userId || !noteId) {
         return handleError(400, "userId and noteId are required to update a note");
     }
@@ -45,19 +46,47 @@ export async function editNote({ userId, noteId, title, text }: ModifyNoteParams
     };
 
     let isFirst = true;
+    let modifiedAtUpdated = false;
 
     if (title) {
         isFirst = addUpdateExpression(params, "title", title, isFirst);
+        modifiedAtUpdated = true;
     }
 
     if (text) {
         isFirst = addUpdateExpression(params, "text", text, isFirst);
+        modifiedAtUpdated = true;
     }
 
-    // Always add modifiedAt
-    addUpdateExpression(params, "modifiedAt", new Date().toISOString(), isFirst);
-   
-    const result = await db.send(new UpdateCommand(params));
-    return result.Attributes; // Return the updated attributes 
+    if (typeof isDeleted === "boolean") {
+        
+        const isDeletedNumeric = isDeleted ? 1 : 0;
     
+        isFirst = addUpdateExpression(params, "isDeleted", isDeletedNumeric, isFirst);
+    
+        if (isDeleted) {
+            // Set TimeToLive if the note is marked as deleted
+            const ttlInSeconds = 10 * 24 * 60 * 60; // 10 dagar
+            const currentTimeInSeconds = Math.floor(Date.now() / 1000);
+            const expireAt = currentTimeInSeconds + ttlInSeconds;
+            isFirst = addUpdateExpression(params, "expireAt", expireAt, isFirst);
+        } else {
+            // Restore expireAt if note no longer is marked as deleted
+            isFirst = addUpdateExpression(params, "expireAt", null, isFirst);
+        }
+    }
+    
+    if (modifiedAtUpdated) {
+        addUpdateExpression(params, "modifiedAt", new Date().toISOString(), isFirst);
+    }
+
+    try {
+        const result = await db.send(new UpdateCommand(params));
+        return result.Attributes; // Return the updated attributes
+    } catch (error) {
+        console.error("Error updating note:", error);
+        throw new Error("Could not update the note");
+    }
 }
+
+
