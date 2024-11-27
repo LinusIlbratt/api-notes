@@ -35,20 +35,26 @@ functions:
     handler: src/functions/postNote/index.main
     events:
       - httpApi:
-          path: /createNote
+          path: /create
           method: post
   getNote:
     handler: src/functions/getNote/index.main
     events:
       - httpApi:
-          path: /getNotes
+          path: /get
           method: get
   updateNote:
     handler: src/functions/updateNote/index.main
     events:
       - httpApi:
-          path: /updateNote
+          path: /update
           method: put
+  deleteNote:
+    handler: src/functions/deleteNote/index.main
+    events:
+      - httpApi:
+          path: /delete
+          method: delete
 
 resources:
   Resources:
@@ -72,10 +78,19 @@ resources:
           - AttributeName: userId
             AttributeType: S
           - AttributeName: noteId
-            AttributeType: S 
+            AttributeType: S
+          - AttributeName: isDeleted
+            AttributeType: N
         KeySchema:
           - AttributeName: userId
             KeyType: HASH 
           - AttributeName: noteId
             KeyType: RANGE 
         BillingMode: PAY_PER_REQUEST
+        GlobalSecondaryIndexes:
+          - IndexName: isDeletedIndex
+            KeySchema:
+              - AttributeName: isDeleted
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
