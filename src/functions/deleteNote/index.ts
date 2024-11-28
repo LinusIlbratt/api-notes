@@ -6,6 +6,8 @@ import { errorHandler } from "../../utils/errorHandler.js";
 import { APIGatewayProxyResult, APIGatewayProxyEvent } from "aws-lambda";
 import { fetchUniqueNote } from "./fetchUniqueNote.js";
 import { validateNoteId } from "../../utils/validateData.js";
+import { sendResponse } from "../../response/index.js";
+import { CustomError, HttpStatusCode } from "../../utils/errorHandler.js";
 
 interface AuthenticatedEvent extends APIGatewayProxyEvent {
     user: { id: string }; // Add userId from JWT-token
@@ -19,18 +21,22 @@ export const handler = async (
     validateNoteId(noteId); 
     const userId = event.user?.id!; 
 
-    await fetchUniqueNote(userId, noteId!); // Fetch note
+    try {
+        // Fetch note to check if it exists
+        await fetchUniqueNote(userId, noteId!);
 
-    // Update note to isDeleted: true
-    await editNote({ userId, noteId: noteId!, isDeleted: true });
+        // Update note to isDeleted: true
+        await editNote({ userId, noteId: noteId!, isDeleted: true });
 
-    return {
-        statusCode: 200,
-        body: JSON.stringify({
+        // Return the response using sendResponse
+        return sendResponse(HttpStatusCode.OK, {
             success: true,
             message: `You have deleted the note with the id "${noteId}"`,
-        }),
-    };
+        });
+    } catch (error) {
+        console.error("Error deleting note:", error);
+        throw new CustomError("Could not delete the note", HttpStatusCode.InternalServerError);
+    }
 };
 
 export const main = middy(handler)

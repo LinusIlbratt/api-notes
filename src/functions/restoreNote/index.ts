@@ -24,21 +24,30 @@ export const handler = async (
 
     const userId = event.user?.id!;
 
-    // Fetch deleted note
-    await getDeletedNote(userId, noteId);
+    try {
+        // Fetch the deleted note
+        await getDeletedNote(userId, noteId!);
 
-    // Restore note
-    const updatedNote = await editNote({
-        userId,
-        noteId,
-        isDeleted: false,
-    });
+        // Restore the note
+        const updatedNote = await editNote({
+            userId,
+            noteId,
+            isDeleted: false,
+        });
 
-    return sendResponse(200, {
-        success: true,
-        message: `Note with ID "${noteId}" has been restored`,
-        updatedNote,
-    });
+        // Return the response using sendResponse
+        return sendResponse(HttpStatusCode.OK, {
+            success: true,
+            message: `Note with ID "${noteId}" has been restored`,
+            updatedNote,
+        });
+    } catch (error) {
+        console.error("Error restoring note:", error);
+        if (error instanceof CustomError) {
+            throw error;
+        }
+        throw new CustomError("Internal server error", HttpStatusCode.InternalServerError);
+    }
 };
 
 // Wrap handler with Middy

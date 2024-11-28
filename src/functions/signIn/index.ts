@@ -1,11 +1,12 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
 import { CustomError, HttpStatusCode } from "../../utils/errorHandler.js";
 import { authenticateUser } from "./authenticateUser.js";
-import { validateData, ValidationRule } from "../../utils/validateData.js";
+import { validateData } from "../../utils/validateData.js";
 import middy from "@middy/core";
 import jsonBodyParser from "@middy/http-json-body-parser";
 import { errorHandler } from "../../utils/errorHandler.js";
 import { signInRules } from "../../utils/validationRules.js";
+import { sendResponse } from "../../response/index.js";
 
 // Handler
 export const handler = async (event: APIGatewayProxyEvent & { body: { username: string; password: string } }): Promise<APIGatewayProxyResult> => {
@@ -22,13 +23,10 @@ export const handler = async (event: APIGatewayProxyEvent & { body: { username: 
         const result = await authenticateUser(username, password);
 
         if (result.success) {
-            return {
-                statusCode: HttpStatusCode.OK, // 200 OK
-                body: JSON.stringify({
-                    success: true,
-                    token: result.token,
-                }),
-            };
+            return sendResponse(HttpStatusCode.OK, { // 200 OK
+                success: true,
+                token: result.token,
+            });
         } else {
             throw new CustomError(result.message || "Authentication failed", result.statusCode || HttpStatusCode.Unauthorized);
         }
@@ -36,8 +34,9 @@ export const handler = async (event: APIGatewayProxyEvent & { body: { username: 
         console.error("Error during authentication:", error);
 
         if (error instanceof CustomError) {
-            throw error; 
+            throw error; // Rethrow the error if it's a known CustomError
         }
+
         throw new CustomError("An unexpected error occurred during authentication", HttpStatusCode.InternalServerError);
     }
 };
