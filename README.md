@@ -32,3 +32,5 @@ The API returns the following HTTP status codes along with a JSON response:
 - **404 Not Found**: The requested resource does not exist.
 - **409 Conflict**: A conflict occurred, such as trying to create a note that already exists.
 - **500 Internal Server Error**: A server-side error occurred.
+
+[Download Insomnia Export](./docs/insomnia-export.json)
