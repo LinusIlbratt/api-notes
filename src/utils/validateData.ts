@@ -12,31 +12,31 @@ export const validateData = (data: any, rules: ValidationRule[]): string[] => {
 
     rules.forEach((rule) => {
         const value = data[rule.field];
-
-        // If field is required and missing
-        if (rule.required && !value) {
+        
+        if (rule.required && (value === undefined || value === null)) {
             errors.push(`${rule.field} is required`);
             return;
         }
-
-        // If field is optional and doesnt exist, skip validation
+        
         if (!rule.required && (value === undefined || value === null)) {
             return;
         }
+        
+        if (typeof value !== 'string') {
+            errors.push(`${rule.field} must be a string.`);
+            return;
+        }
 
-        // Validate minLength if field exists
         if (rule.minLength && value.length < rule.minLength) {
             errors.push(`${rule.field} must be at least ${rule.minLength} characters long.`);
             return;
         }
 
-        //  Validate maxLength if field exists
         if (rule.maxLength && value.length > rule.maxLength) {
             errors.push(`${rule.field} must not exceed ${rule.maxLength} characters.`);
             return;
         }
 
-        // Validate pattern if field exists 
         if (rule.pattern && !rule.pattern.test(value)) {
             errors.push(`${rule.field} is invalid.`);
             return;
@@ -45,6 +45,7 @@ export const validateData = (data: any, rules: ValidationRule[]): string[] => {
 
     return errors;
 };
+
 
 // Validate noteId
 export const validateNoteId = (noteId?: string): void => {

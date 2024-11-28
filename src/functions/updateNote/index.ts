@@ -7,6 +7,7 @@ import { updateNoteValidationRules } from "../../utils/validationRules.js";
 import { editNote } from "./editNote.js";
 import { CustomError, HttpStatusCode } from "../../utils/errorHandler.js";
 import { errorHandler } from "../../utils/errorHandler.js";
+import { sendResponse } from "../../response/index.js";
 
 
 interface AuthenticatedEvent extends APIGatewayProxyEvent {
@@ -47,15 +48,18 @@ export const handler = async (
         // Update the note
         const updatedNote = await editNote({ userId, noteId, title, text });
 
-        return {
-            statusCode: HttpStatusCode.OK,
-            body: JSON.stringify({ success: true, updatedNote }),
-        };
+        // Use sendResponse to format the success response
+        return sendResponse(HttpStatusCode.OK, {
+            success: true,
+            updatedNote,
+        });
     } catch (error: any) {
         if (error.name === "ConditionalCheckFailedException") {
+            // Handle note not found
             throw new CustomError("Note not found", HttpStatusCode.NotFound);
         }
         console.error("Error updating note:", error);
+        // Use sendResponse to handle server errors
         throw new CustomError("Could not update the note", HttpStatusCode.InternalServerError);
     }
 };

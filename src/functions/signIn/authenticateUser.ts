@@ -16,7 +16,7 @@ export async function authenticateUser(username: string, password: string): Prom
     const user = await getUser(username);
 
     if (!user) {
-        throw new CustomError("User not found", HttpStatusCode.NotFound);  // 404
+        throw new CustomError("Incorrect username or password", HttpStatusCode.NotFound);  // 404
     }
 
     const hashedPassword = user.password?.S;

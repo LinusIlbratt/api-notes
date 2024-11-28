@@ -1,12 +1,12 @@
 import { MiddlewareObj } from "@middy/core";
-import jwt, { JwtPayload } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import { APIGatewayProxyEvent } from "aws-lambda";
+import { CustomError, HttpStatusCode } from "./errorHandler.js";
 
 interface AuthenticatedEvent extends APIGatewayProxyEvent {
-    user?: { id: string }; // Store userinfo from token
+    user?: { id: string }; 
 }
 
-// Middleware for auth
 export const authMiddleware = (): MiddlewareObj<AuthenticatedEvent> => {
     console.log("authMiddleware triggered");
     return {
@@ -18,26 +18,24 @@ export const authMiddleware = (): MiddlewareObj<AuthenticatedEvent> => {
             console.log("Token received:", token);
 
             if (!token) {
-                throw new Error("Unauthorized: Missing Authorization header");
+                
+                throw new CustomError("Unauthorized: Missing Authorization header", HttpStatusCode.Unauthorized);
             }
 
             try {
                 const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string);
-              //  console.log("Decoded token:", decoded); 
-
-                // Check if decoded is a object, JwTPayload
                 if (typeof decoded === "object" && decoded !== null && "id" in decoded) {
-                    handler.event.user = { id: decoded.id as string }; // Store `userId` in event
+                    handler.event.user = { id: decoded.id as string }; 
                     console.log("User ID added to event:", handler.event.user);
                 } else {
-                    throw new Error("Unauthorized: Missing user ID in token");
+                    
+                    throw new CustomError("Unauthorized: Missing user ID in token", HttpStatusCode.Unauthorized);
                 }
             } catch (err) {
                 console.error("JWT Verification Error:", err);
-                throw new Error("Unauthorized: Invalid token");
+                
+                throw new CustomError("Unauthorized: Invalid token", HttpStatusCode.Unauthorized);
             }
         },
     };
 };
-
-
