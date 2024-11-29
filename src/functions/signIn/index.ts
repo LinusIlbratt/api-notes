@@ -13,7 +13,7 @@ export const handler = async (event: APIGatewayProxyEvent & { body: { username: 
     const { username, password } = event.body;
 
     // Validate input
-    const validationErrors = validateData({ username, password }, signInRules);
+    const validationErrors = validateData(event.body, signInRules);
     if (validationErrors.length > 0) {
         throw new CustomError(`Validation failed: ${validationErrors.join(", ")}`, HttpStatusCode.BadRequest);  
     }

@@ -13,11 +13,12 @@ export enum HttpStatusCode {
 }
 
 export class CustomError extends Error {
-    statusCode: number;
+    public statusCode: number;
 
     constructor(message: string, statusCode: number) {
         super(message);
         this.statusCode = statusCode;
+        Object.setPrototypeOf(this, new.target.prototype); // Behövs för att instanceof ska fungera
     }
 }
 

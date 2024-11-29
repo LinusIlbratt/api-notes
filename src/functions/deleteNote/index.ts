@@ -8,6 +8,8 @@ import { fetchUniqueNote } from "./fetchUniqueNote.js";
 import { validateNoteId } from "../../utils/validateData.js";
 import { sendResponse } from "../../response/index.js";
 import { CustomError, HttpStatusCode } from "../../utils/errorHandler.js";
+import { validateData } from "../../utils/validateData.js";
+import { noteIdValidationRules } from "../../utils/validationRules.js";
 
 interface AuthenticatedEvent extends APIGatewayProxyEvent {
     user: { id: string }; // Add userId from JWT-token
@@ -17,6 +19,12 @@ export const handler = async (
     event: AuthenticatedEvent
 ): Promise<APIGatewayProxyResult> => {
     const { noteId } = event.body as { noteId?: string }; // `jsonBodyParser` handle parsing
+
+    // Validate input
+    const validationErrors = validateData(event.body, noteIdValidationRules);
+    if (validationErrors.length > 0) {
+        throw new CustomError(validationErrors.join(", "), HttpStatusCode.BadRequest);
+    }
 
     validateNoteId(noteId); 
     const userId = event.user?.id!; 
@@ -40,6 +48,6 @@ export const handler = async (
 };
 
 export const main = middy(handler)
-    .use(jsonBodyParser()) // Parsar JSON body
-    .use(authMiddleware()) // Autentisering
-    .use(errorHandler); // Felhantering
+    .use(jsonBodyParser()) // Parsing JSON body
+    .use(authMiddleware()) // Auth
+    .use(errorHandler); // Error handling

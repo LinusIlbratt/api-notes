@@ -11,13 +11,19 @@ import { sendResponse } from "../../response/index.js";
 
 
 interface AuthenticatedEvent extends APIGatewayProxyEvent {
-    user: { id: string }; // UserId från JWT-token
+    user: { id: string }; // UserId from JWT-token
 }
 
 export const handler = async (
     event: AuthenticatedEvent & { body: { noteId: string; title?: string; text?: string } }
 ): Promise<APIGatewayProxyResult> => {
     const { noteId, title, text } = event.body;
+
+      // Validate field lengths
+      const validationErrors = validateData(event.body, updateNoteValidationRules);
+      if (validationErrors.length > 0) {
+          throw new CustomError(validationErrors.join(", "), HttpStatusCode.BadRequest);
+      }
 
     // Validate noteId
     if (!noteId) {
@@ -32,12 +38,6 @@ export const handler = async (
         );
     }
 
-    // Validate field lengths
-    const validationErrors = validateData(event.body, updateNoteValidationRules);
-    if (validationErrors.length > 0) {
-        throw new CustomError(validationErrors.join(", "), HttpStatusCode.BadRequest);
-    }
-
     // Get userId from middleware
     const userId = event.user?.id;
     if (!userId) {
@@ -45,23 +45,25 @@ export const handler = async (
     }
 
     try {
-        // Update the note
         const updatedNote = await editNote({ userId, noteId, title, text });
-
-        // Use sendResponse to format the success response
+    
         return sendResponse(HttpStatusCode.OK, {
             success: true,
             updatedNote,
         });
     } catch (error: any) {
-        if (error.name === "ConditionalCheckFailedException") {
-            // Handle note not found
-            throw new CustomError("Note not found", HttpStatusCode.NotFound);
+        console.error("Error in updateNote handler:", error);
+    
+        if (error instanceof CustomError) {
+            return sendResponse(error.statusCode, { success: false, message: error.message });
         }
-        console.error("Error updating note:", error);
-        // Use sendResponse to handle server errors
-        throw new CustomError("Could not update the note", HttpStatusCode.InternalServerError);
+            
+        return sendResponse(HttpStatusCode.InternalServerError, {
+            success: false,
+            message: "Internal server error",
+        });
     }
+    
 };
 
 export const main = middy(handler)

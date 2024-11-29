@@ -12,14 +12,14 @@ import { errorHandler } from "../../utils/errorHandler.js";
 import { sendResponse } from "../../response/index.js";
 
 export const handler = async (
-    event: APIGatewayProxyEvent & { body: { username: string; password: string } } // Typa body som objekt
+    event: APIGatewayProxyEvent & { body: { username: string; password: string } } 
 ): Promise<APIGatewayProxyResult> => {
-    const { username, password } = event.body; // Automatisk parsing med jsonBodyParser
+    const { username, password } = event.body; 
 
-    // 1. Validera input
-    const validationErrors = validateData({ username, password }, signUpRules);
+    // Validate input
+    const validationErrors = validateData(event.body, signUpRules);
     if (validationErrors.length > 0) {
-        throw new CustomError(validationErrors.join(", "), HttpStatusCode.BadRequest);
+        throw new CustomError(`Validation failed: ${validationErrors.join(", ")}`, HttpStatusCode.BadRequest);  
     }
 
     try {
