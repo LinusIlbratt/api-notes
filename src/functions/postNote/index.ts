@@ -7,6 +7,7 @@ import { validateData } from "../../utils/validateData.js";
 import { postNoteValidationRules } from "../../utils/validationRules.js";
 import { saveNote } from "./saveNote.js";
 import { CustomError, HttpStatusCode } from "../../utils/errorHandler.js";
+import { sendResponse } from "../../response/index.js";
 
 // Expanded type for event with user information
 interface AuthenticatedEvent extends APIGatewayProxyEvent {
@@ -33,10 +34,8 @@ export const handler = async (
         const { title, text } = event.body;
         const noteId = await saveNote(userId, { title, text });
 
-        return {
-            statusCode: HttpStatusCode.Created, // 201 Created
-            body: JSON.stringify({ success: true, id: noteId }),
-        };
+       // Return response using sendResponse
+       return sendResponse(HttpStatusCode.Created, { success: true, id: noteId });
     } catch (error) {
         console.error("Error saving note:", error);
         throw new CustomError("Could not save the note", HttpStatusCode.InternalServerError);

@@ -9,6 +9,7 @@ import { CustomError, HttpStatusCode } from "../../utils/errorHandler.js";
 import { validateData } from "../../utils/validateData.js";
 import { signUpRules } from "../../utils/validationRules.js";
 import { errorHandler } from "../../utils/errorHandler.js";
+import { sendResponse } from "../../response/index.js";
 
 export const handler = async (
     event: APIGatewayProxyEvent & { body: { username: string; password: string } } // Typa body som objekt
@@ -22,25 +23,27 @@ export const handler = async (
     }
 
     try {
-        
+        // Check if username already exists
         await checkUserName(username);
 
+        // Hash the password and create user account
         const hashedPassword = await bcrypt.hash(password, 10);
         const userId = nanoid();
         await createAccount(username, hashedPassword, userId);
 
-        return {
-            statusCode: HttpStatusCode.Created,
-            body: JSON.stringify({
-                success: true,
-                userId,
-                message: "User created successfully",
-            }),
-        };
-    } catch (error) {       
+        // Return success response with sendResponse
+        return sendResponse(HttpStatusCode.Created, { // 201 Created
+            success: true,
+            userId,
+            message: "User created successfully",
+        });
+    } catch (error) {
+        // Handle expected errors (like CustomError)
         if (error instanceof CustomError) {
-            throw error;
+            throw error;  // Let CustomError propagate, it will be handled by errorHandler
         }
+
+        // Log and handle unexpected errors
         console.error("Unexpected error in sign-up handler:", error);
         throw new CustomError("An unexpected error occurred", HttpStatusCode.InternalServerError);
     }
