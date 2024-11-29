@@ -55,6 +55,12 @@ functions:
       - httpApi:
           path: /delete
           method: delete
+  getDeletedNotes:
+    handler: src/functions/getDeletedNotes/index.main
+    events:
+      - httpApi:
+          path: /getDeletedNotes
+          method: get
   restoreNote:
     handler: src/functions/restoreNote/index.main
     events:

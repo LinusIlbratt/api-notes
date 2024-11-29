@@ -10,6 +10,14 @@ export interface ValidationRule {
 export const validateData = (data: any, rules: ValidationRule[]): string[] => {
     const errors: string[] = [];
 
+    const allowedFields = rules.map((rule) => rule.field); // Fields allowed based on the rules
+
+    // Control for extra fields 
+    const extraFields = Object.keys(data).filter((key) => !allowedFields.includes(key));
+    if (extraFields.length > 0) {
+        errors.push(`Extra fields are not allowed: ${extraFields.join(", ")}`);
+    }
+
     rules.forEach((rule) => {
         const value = data[rule.field];
         

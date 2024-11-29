@@ -20,4 +20,8 @@ export const signInRules: ValidationRule[] = [
     { field: "password", required: true },
 ];
 
+export const noteIdValidationRules: ValidationRule[] = [
+    { field: "noteId", required: true},
+];
+
 

@@ -47,3 +47,4 @@ export const main = middy(handler)
     .use(jsonBodyParser()) // Automatically parses JSON body
     .use(authMiddleware()) // Adds user authentication
     .use(errorHandler); // Handles errors
+    
