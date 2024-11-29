@@ -35,7 +35,7 @@ export const handler = async (
         const noteId = await saveNote(userId, { title, text });
 
        // Return response using sendResponse
-       return sendResponse(HttpStatusCode.Created, { success: true, id: noteId });
+       return sendResponse(HttpStatusCode.Created, { success: true, noteId: noteId });
     } catch (error) {
         console.error("Error saving note:", error);
         throw new CustomError("Could not save the note", HttpStatusCode.InternalServerError);
