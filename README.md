@@ -16,7 +16,7 @@ Download export file here and import it to Insomnia/Postman to test the endpoint
 
 ### Public Endpoints (No authentication required)
 
-- **POST /api/user/signup**: Create a new user account.
+- **POST /api/signup**: Create a new user account.
 
   Signup to be able to login and use the API.
 
@@ -37,7 +37,7 @@ Download export file here and import it to Insomnia/Postman to test the endpoint
   }
   ```
 
-- **POST /api/login**: Log in and generate an authentication token for the user.
+- **POST /api/signin**: Log in and generate an authentication token for the user.
 
   Authenticate a user and retrieve a JWT token.
 
@@ -89,10 +89,10 @@ Download export file here and import it to Insomnia/Postman to test the endpoint
     "success": true,
     "notes": [
       {
-        "modifiedAt": "2024-11-26T11:52:51.830Z",
+        "modifiedAt": "date_ISO_formatted",
         "noteId": "noteId",
         "userId": "userId",
-        "createdAt": "2024-11-25T12:30:29.489Z",
+        "createdAt": "date_ISO_formatted",
         "isDeleted": 0,
         "text": "note_text",
         "title": "the_title"
@@ -101,11 +101,13 @@ Download export file here and import it to Insomnia/Postman to test the endpoint
   }
   ```
 
-- **POST /api/create**: Create a note.
+- **PUT /api/update**: Update a note. Change title/text or both.
+Require atleast text or title in the request body.
 
   **Request Body:**
   ```json
   {
+    "noteId": "noteId",
     "title": "note_title",
     "text": "note_text"
   }
@@ -115,7 +117,15 @@ Download export file here and import it to Insomnia/Postman to test the endpoint
   ```json
   {
     "success": true,
-    "id": "note_id"
+    "updatedNote": {
+        "modifiedAt": "date_ISO_formatted",
+        "noteId": "noteId",
+        "userId": "userId",
+        "createdAt": "date_ISO_formatted",
+        "isDeleted": 0,
+        "text": "note_text",
+        "title": "note_title"
+    }
   }
   ```
 
@@ -144,11 +154,11 @@ Download export file here and import it to Insomnia/Postman to test the endpoint
     "success": true,
     "notes": [
       {
-        "expireAt": 1733752146,
-        "modifiedAt": "2024-11-29T08:53:11.454Z",
+        "expireAt": "time_left",
+        "modifiedAt": "date_ISO_formatted",
         "noteId": "noteId",
         "userId": "userId",
-        "createdAt": "2024-11-29T07:26:14.789Z",
+        "createdAt": "date_ISO_formatted",
         "isDeleted": 1,
         "text": "note_text",
         "title": "note_title"
