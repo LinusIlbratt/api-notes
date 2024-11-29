@@ -2,6 +2,9 @@
 
 The **Notes API** is a secure platform designed for managing and storing notes for individual users. Each note is tied to a specific user, and only authenticated users can access their own notes. The API supports the creation, reading, updating, restoration, and deletion of notes. It leverages **AWS Lambda**, **API Gateway**, **DynamoDB**, and **Middy middleware** for authentication and authorization.
 
+Download export file here and import it to Insomnia/Postman to test the endpoints.
+[Download Insomnia Export Here](./docs/Linus_Insomnia_API_Notes.json)
+
 ## Technologies Used
 - **AWS API Gateway** – API routing and request handling.
 - **AWS Lambda** – Serverless compute for backend logic.
@@ -13,14 +16,15 @@ The **Notes API** is a secure platform designed for managing and storing notes f
 
 ### Public Endpoints (No authentication required)
 - **POST /api/user/signup**: Create a new user account.
+- **POST /api/login**: Log in and generate an authentication token for the user.
 
 ### Protected Endpoints (Authentication required)
-- **POST /api/login**: Log in and generate an authentication token for the user.
 - **POST /api/create**: Create a new note for the authenticated user.
 - **POST /api/restore**: Restore a deleted note by setting `isDeleted` to `false` and `expireAt` to `null`.
 - **GET /api/get**: Retrieve all notes for the authenticated user.
 - **PUT /api/update**: Update an existing note for the authenticated user.
 - **DELETE /api/delete**: Delete a note for the authenticated user.
+- **GET /api/getDeletedNote**: Get all deleted notes for the authenticated user
 
 ## Error Handling
 
@@ -33,4 +37,139 @@ The API returns the following HTTP status codes along with a JSON response:
 - **409 Conflict**: A conflict occurred, such as trying to create a note that already exists.
 - **500 Internal Server Error**: A server-side error occurred.
 
-[Download Insomnia Export Here](./docs/Linus_Insomnia_API_Notes.json)
+-**POST /signup**
+Signup to be able to login and use the api.
+
+Request Body:
+
+{
+   "username":  "your_username",
+   "password":  "your_password"
+}
+Response:
+
+{
+	"success":  true,
+	"userId":  "your_userId"
+    "message; "User created successfully"
+}
+
+-**POST /signin**
+Authenticate a user and retrieve a JWT token.
+
+Request Body:
+
+{ 
+    "username": "your_username", 
+    "password": "your_password" 
+}
+Response:
+
+{
+	"success":  true,
+	"token":  "your_token"
+}
+
+# POST /notes
+Add a note.
+
+Request Body:
+
+{
+   "title":  "note_title",
+   "text":  "note_text"
+}
+Response:
+
+{
+	"success":  true,
+	"noteId":  "the_noteId"
+}
+Get /get
+Retrive all notes.
+
+Response:
+
+{
+	"success":  true,
+	"notes":  [
+			{
+			"modifiedAt":  "2024-11-26T11:52:51.830Z",
+			"noteId":  "noteId",
+            "userId": "userId",
+			"createdAt":  "2024-11-25T12:30:29.489Z",
+            "isDeleted": 0,
+			"text":  "note_text",
+			"title":  "the_title"
+			}
+	]
+}
+
+Post /create
+Create a note.
+
+Request Body:
+
+{
+"title":  "note_title",
+"text":  "note_text"
+}
+Response:
+
+{
+	"success":  true,
+	"id":  "note_id"
+}
+
+Delete /delete
+Soft delete a note with TTL timer
+
+Request Body:
+
+{
+"noteId": "noteId"
+}
+
+Response:
+
+{
+	"success": true,
+	"message": "You have deleted the note with the id \"noteId"
+}
+
+Get /getDeletedNotes
+Retrive all notes marked for deletion.
+
+Response:
+
+{
+	"success": true,
+	"notes": [
+		{
+			"expireAt": 1733752146,
+			"modifiedAt": "2024-11-29T08:53:11.454Z",
+			"noteId": "noteId",
+			"userId": "userId",
+			"createdAt": "2024-11-29T07:26:14.789Z",
+			"isDeleted": 1,
+			"text": "note_text",
+			"title": "note_title"
+		}
+	]
+}
+
+Post /restore
+Restore soft deleted note and sets TTL timer to null
+
+Request Body:
+
+{
+"noteId": "noteId"
+}
+
+Response:
+
+{
+	"success": true,
+	"message": "Note with ID \"noteId\" has been restored"
+}
